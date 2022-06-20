@@ -24,7 +24,7 @@ To run this project, you need follow the next steps.
 ```
 3. Execute on a Command Prompt the next instruction to test the API.
 ```
- C:\FILE\PATH\APIFile>python api.py
+ C:\FILE\PATH\APIFile>python request.py
 ```
 
 
