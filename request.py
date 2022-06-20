@@ -28,6 +28,7 @@ def post_request():
         print(resp.content)
     else:
         print(f'request successful: {resp.content}')
+        
 
 if __name__ == '__main__':
     post_request()

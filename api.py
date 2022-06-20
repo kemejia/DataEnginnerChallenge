@@ -24,6 +24,7 @@ app= Flask(__name__)
 def insertData():
     #convert the request to JSON 
     posted_data = request.get_json()
+    
     #security
     headers = request.headers
     auth = headers.get("X-Api-Key")
@@ -63,24 +64,23 @@ def insertData():
         conn.commit()
         
         #Develop a way to obtain the weekly average number of trips for an area
-        #sp_average = "EXECUTE usp_RegionWeeklyAvg"
-        #cursor.execute(sp_query)
-        #conn.commit()
-        
         try:
             sp_average = pd.read_sql_query("EXECUTE usp_RegionWeeklyAvg", conn)
             dfw = pd.DataFrame(sp_average, columns=['Region', 'RegionWeeklyAvg'])
-            print(dfw)
+            #return print(dfw)
+       
         except:
             print("Error: unable to convert the data")
         
         
         #Develop a way to inform the user about the status of the data ingestion without using a polling solution.       
-        return jsonify(str("Successfully stored")) 
+        return jsonify({"message" : "Successfully stored",
+                        "dfRegionWeeklyAvg" : dfw.to_json()}) 
+    
     
     
     else:
-        return jsonify(str("Error stored")) 
+        return jsonify({"message" : "Error stored"}) 
     
     
     conn.close()
