@@ -5,19 +5,20 @@ Created on Sat Jun 18 18:24:05 2022
 @author: Carlos Mejia
 """
 
-import csv
+#import csv
+#import sqlalchemy as db
+#from sqlalchemy import create_engine, types, inspect
 import pandas as pd
-import sqlalchemy as db
-from sqlalchemy import create_engine, types, inspect
 from flask import Flask, jsonify, request
 import pyodbc
+import warnings
 
-    # initialize our Flask application
+#ignore warnings
+warnings.filterwarnings("ignore")
+
+# initialize our Flask application
 app= Flask(__name__)
 @app.route("/InsertData", methods=["POST"])
-
-#  main thread of execution to start the server
-
     
 #API security
 def insertData():
@@ -31,67 +32,60 @@ def insertData():
     else:
         return jsonify({"message": "ERROR: Unauthorized"}), 401
     
-    #acatar la orden de true para actualizar que viene del request
-    print('body..............................................')
-    print(str(request.data))
-    
+    #validate if the request coming is true
     if request.data:
-        print('inside body')
+        
         #read CSV
         url = 'https://drive.google.com/file/d/14JcOSJAWqKOUNyadVZDPm7FplA7XYhrU/view?usp=sharing'
         path = 'https://drive.google.com/uc?export=download&id=' + url.split('/')[-2]
         df = pd.read_csv(path)
-        #print(df.shape)
-            
+                  
         #connection database
         #conn = pyodbc.connect('DRIVER={ODBC Driver 17 for SQL Server};SERVER=DESKTOP-L80GCAR;DATABASE=DBEngineer;UID=DataEngineer;PWD=Qwerty123*')
         conn = pyodbc.connect('DRIVER={SQL Server};SERVER=DESKTOP-L80GCAR;DATABASE=DBEngineer;UID=DataEngineer;PWD=Qwerty123*')
         cursor = conn.cursor()
-            
         
+        #Delete Staging table
+        delete_query = "DELETE FROM TripsStaging"
+        cursor.execute(delete_query)
+        conn.commit()
+            
+        #Load staging table TripsStaging
         for i in df.index:  
-            insert_into = "INSERT INTO TripsTemp(Region,OriginCoord,DestinationCoord,DateTimeTrip,DataSource)"
-            insert = insert_into + "VALUES('"+ df["region"][i]+ "'"",'" + df["origin_coord"][i] + "','" + df["destination_coord"][i]+"','"+ df["datetime"][i]+"','"+ df["datasource"][i]+"')"       
-            cursor.execute(insert)
-            #commit the transaction
+            insert_into = "INSERT INTO TripsStaging(Region,OriginCoord,DestinationCoord,DateTimeTrip,DataSource)"
+            insert_query = insert_into + "VALUES('"+ df["region"][i]+ "'"",'" + df["origin_coord"][i] + "','" + df["destination_coord"][i]+"','"+ df["datetime"][i]+"','"+ df["datasource"][i]+"')"       
+            cursor.execute(insert_query)
             conn.commit()
             
+        #Load final table Trip
+        sp_query = "EXECUTE usp_loadTrip"
+        cursor.execute(sp_query)
+        conn.commit()
+        
+        #Develop a way to obtain the weekly average number of trips for an area
+        #sp_average = "EXECUTE usp_RegionWeeklyAvg"
+        #cursor.execute(sp_query)
+        #conn.commit()
+        
+        try:
+            sp_average = pd.read_sql_query("EXECUTE usp_RegionWeeklyAvg", conn)
+            dfw = pd.DataFrame(sp_average, columns=['Region', 'RegionWeeklyAvg'])
+            print(dfw)
+        except:
+            print("Error: unable to convert the data")
+        
+        
+        #Develop a way to inform the user about the status of the data ingestion without using a polling solution.       
         return jsonify(str("Successfully stored")) 
-
+    
+    
     else:
         return jsonify(str("Error stored")) 
+    
+    
+    conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
 
     
-    
-    # =============================================================================
-    # funciona el select
-    #     cursor.execute("SELECT * FROM TripsTemp")
-    #     tables = cursor.fetchall()
-    #     
-    #     
-    #     for row in cursor.columns(table='TripsTemp'):
-    #         print (row.column_name)
-    #         for field in row:
-    #             print (field)
-    # =============================================================================
-    # =============================================================================
-    #     engine = create_engine('mssql+pyodbc://DataEngineer:Qwerty123*@DESKTOP-L80GCAR/DataEngineer')
-    #     engine = db.create_engine('mssql://DESKTOP-L80GCAR\\SQLEXPRESS/DataEngineer?trusted_connection=yes')
-    #     inspector = inspect(engine)
-    #     inspector.get_columns('TripsTemp')
-    #     
-    #     
-    #     metadata = db.metadata()
-    #     TripsTemp = db.Table('TripsTemp', metadata, autoload=True, autoload_with=engine) 
-    #     
-    #     connection =  engine.connect()
-    #     query = db.select([TripsTemp])
-    #     result = connection.execute(query)
-    #     resultSet = result.fetchall()
-    #     resultSet[:3]
-    # =============================================================================
-        
-
