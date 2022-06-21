@@ -5,7 +5,7 @@
 * [Setup](#setup)
 
 ## General info
-This project is simple Lorem ipsum dolor generator.
+This project is an automatic process to ingest data on an on-demand basis, through an API.
 	
 ## Technologies
 Project is created with:
